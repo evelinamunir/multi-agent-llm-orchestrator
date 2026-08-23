@@ -1,0 +1,19 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env
+
+# Local models
+*.gguf
+*.bin
+*.pt
+*.safetensors
+models/
+
+# OS generated files
+.DS_Store
