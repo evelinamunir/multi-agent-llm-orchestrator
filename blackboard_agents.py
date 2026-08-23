@@ -2,10 +2,9 @@
 import argparse
 import json
 import re
-import textwrap
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+
 
 # LLM Backend Layer
 # Agents don't call the model directly, means that underlying engine can be swapped out easily
@@ -92,14 +91,14 @@ class TransformersBackend(LLMBackend):
         return text.strip()
 
 # Factory function to build the appropriate backend
-def build_backend(model_path: Optional[str], hf_fallback: str) -> LLMBackend:
+def build_backend(model_path: str | None, hf_fallback: str) -> LLMBackend:
     """Try llama.cpp first (runs a local .gguf file),
     fall back to transformers if that's not installed or no model path given.
     """
     if model_path:
         try:
             return LlamaCppBackend(model_path)
-        except Exception as e:
+        except (ImportError, ValueError, RuntimeError) as e:
             # Informs user if llama-cpp-python is unavailable or the model path is invalid, and falls back to transformers
             print(f"[backend] llama-cpp-python unavailable ({e}); falling back to transformers.")
     return TransformersBackend(hf_fallback)
@@ -110,17 +109,17 @@ class Blackboard:
     """Shared memory space for all agents to read from and write to."""
     goal: str
     # Holds subtasks
-    plan: List[Dict] = field(default_factory=list)
+    plan: list[dict] = field(default_factory=list)
     # Aggregated research notes from the ResearcherAgent
     research_notes: str = ""
     # The working doc
     draft: str = ""
     # Critique from the CriticAgent
-    critique: List[str] = field(default_factory=list)
+    critique: list[str] = field(default_factory=list)
     # Number of revisions made to the draft
     revisions: int = 0
     # Transcript of all agent interactions for debugging/logging
-    transcript: List[Dict] = field(default_factory=list)
+    transcript: list[dict] = field(default_factory=list)
 
     def log(self, agent: str, content: str):
         """Records an agent's action to the transcript and prints a summary."""
@@ -136,12 +135,12 @@ def _extract_json(text: str) -> str:
     return text
 
 
-def safe_json_list(text: str) -> List[Dict]:
+def safe_json_list(text: str) -> list[dict]:
     """Attempts to parse a JSON list; provides a robust fallback if the LLM hallucinates."""
     try:
         data = json.loads(_extract_json(text))
         return data if isinstance(data, list) else [data]
-    except Exception:
+    except (json.JSONDecodeError, TypeError):
         # Fallback, manually parse each line if JSON decoding fails
         return [
             {"step": i + 1, "owner": "researcher", "task": line.strip("-* ")}
@@ -149,15 +148,16 @@ def safe_json_list(text: str) -> List[Dict]:
         ]
 
 
-def safe_json_obj(text: str, default: Dict) -> Dict:
+def safe_json_obj(text: str, default: dict) -> dict:
     """Attempts to parse a JSON object, returning a default dictionary on failure."""
     try:
         return json.loads(_extract_json(text))
-    except Exception:
+    except (json.JSONDecodeError, TypeError):
         return default
 
 
 # Agents
+
 class Agent:
     """Base agent class handling basic initialisation and execution."""
     name: str = "Agent"
@@ -186,7 +186,7 @@ class PlannerAgent(Agent):
         "No prose and no markdown fences, just the JSON array."
     )
 
-    def plan(self, bb: Blackboard) -> List[Dict]:
+    def plan(self, bb: Blackboard) -> list[dict]:
         """Generates the plan and updates the blackboard."""
         raw = self.act(f"Goal: {bb.goal}", bb, max_tokens=400)
         bb.plan = safe_json_list(raw)
@@ -255,7 +255,7 @@ class CriticAgent(Agent):
         "Output raw JSON only."
     )
 
-    def review(self, bb: Blackboard) -> Dict:
+    def review(self, bb: Blackboard) -> dict:
         """Scores the draft and outputs structured revision issues."""
         prompt = f"Goal: {bb.goal}\n\nResearch notes:\n{bb.research_notes}\n\nDraft:\n{bb.draft}"
         raw = self.act(prompt, bb, max_tokens=300)
@@ -308,6 +308,7 @@ def run_task(goal: str, backend: LLMBackend, max_revisions: int = 4) -> Blackboa
     return bb
 
 # CLI execution
+
 def main():
     """Parses command-line arguments and starts the orchestration layer."""
     ap = argparse.ArgumentParser(description="Local multi-agent task planner.")
