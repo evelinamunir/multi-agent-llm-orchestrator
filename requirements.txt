@@ -1,0 +1,7 @@
+# Local inference via GGUF files
+llama-cpp-python>=0.2.0
+
+# Hugging Face fallback
+torch>=2.0.0
+transformers>=4.34.0
+accelerate>=0.23.0
