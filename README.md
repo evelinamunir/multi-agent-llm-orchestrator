@@ -5,10 +5,10 @@ A local, multi-agent workflow that takes a user specified goal and automatically
 Four separate agents are used in this workflow: Planner, Researcher, Writer, and Critic. They collaborate through a shared "Blackboard." 
 The underlying framework supports multiple LLM backends; it defaults to a lightweight Hugging Face transformers pipeline, but supports local .gguf files via llama.cpp.
 
-## Key Features
+## Main Features
 * **Modular Agent Design:** Separate agents with specific system prompts keep the context window focused.
 * **Automatic Fallbacks:** Attempts to load `llama-cpp-python` for local CPU/GPU execution, but falls back to Hugging Face `transformers` if unavailable.
-* **Iterative Refinement:** The Critic agent forces output revisions until the quality threshold is met, or the max iterations is reached.
+* **Iterative Refinement:** The Critic agent forces output revisions until the quality threshold is met, or the max iterations is reached. The max iterations set in the code is: 4. However, this can be changed.
 
 ## Command-Line Arguments
 
