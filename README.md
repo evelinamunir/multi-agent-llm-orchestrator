@@ -28,3 +28,8 @@ The underlying framework supports multiple LLM backends; it defaults to a lightw
 
 ### Robustness note:
 *When using small models (e.g. 3B-Q4 Llama model), expect the Critic's JSON to occasionally come back malformed. The `safe_json_obj` fallback handles this, outputting "Could not parse critique JSON" in the issues list.*
+
+<br>
+
+### Example of blackboard visualiser:
+<img src="Blackboard_Example.png" width="550"/>
