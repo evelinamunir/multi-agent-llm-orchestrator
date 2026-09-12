@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Agent Blackboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wood-dark:#3c2415;
+    --wood-mid:#5c3a24;
+    --wood-light:#7a5335;
+    --board-bg:#2f3e34;
+    --board-bg2:#28352c;
+    --chalk:#eef2ea;
+    --chalk-dim:#c6d1c6;
+    --ui-bg:#ece6d8;
+    --ui-ink:#241a12;
+    --planner:#f2c14e;
+    --planner-ink:#5c4405;
+    --researcher:#7fb8bd;
+    --researcher-ink:#0f3a3d;
+    --writer:#d98fb0;
+    --writer-ink:#5c1c39;
+    --critic:#c1543c;
+    --critic-ink:#fbe9e4;
+    --critic-ink-modal:#5c1710;
+    --guest:#b9b3a3;
+    --guest-ink:#333;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#141a15;
+    font-family:'Google Sans Flex',sans-serif;
+    color:var(--ui-ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 12px 40px;
+    min-height:100vh;
+  }
+
+  /* Shared colour classes */
+  .card-planner{ background:var(--planner); color:var(--planner-ink); }
+  .card-researcher{ background:var(--researcher); color:var(--researcher-ink); }
+  .card-writer{ background:var(--writer); color:var(--writer-ink); }
+  .card-critic{ background:var(--critic); color:var(--critic-ink); }
+  .card-guest{ background:var(--guest); color:var(--guest-ink); }
+
+  /* Toolbar */
+  .toolbar{
+    width:100%;
+    max-width:920px;
+    background:var(--ui-bg);
+    border-radius:10px;
+    padding:12px 16px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:14px;
+    margin-bottom:16px;
+    box-shadow:0 2px 0 rgba(0,0,0,.15);
+  }
+  .toolbar h1{
+    font-size:20px;
+    margin:0;
+    margin-right:auto;
+    color:var(--ui-ink);
+  }
+  .toolbar button, .toolbar label.filebtn{
+    font-size:13px;
+    font-weight:600;
+    background:var(--wood-mid);
+    color:#f4ede1;
+    border:none;
+    border-radius:6px;
+    padding:8px 14px;
+    cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .toolbar button:hover, .toolbar label.filebtn:hover{ background:var(--wood-light); }
+  .toolbar button:active{ transform:translateY(1px); }
+  .toolbar button:disabled, .toolbar label.filebtn.disabled{ opacity:.4; cursor:default; pointer-events:none; }
+  .toolbar input[type=file]{ display:none; }
+  .speed-wrap{ display:flex; align-items:center; gap:6px; font-size:12px; }
+  .speed-wrap input[type=range]{ accent-color:var(--wood-mid); }
+  .progress{ font-size:12px; color:#5a5142; min-width:80px; text-align:right; }
+
+  .live-badge{
+    display:none;
+    align-items:center;
+    gap:7px;
+    font-size:12px;
+    font-weight:600;
+    color:#b23b2c;
+    background:#fbe6e2;
+    padding:5px 12px;
+    border-radius:20px;
+  }
+  .live-badge .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:#c1442f;
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  .live-badge.done{ color:#1f5c37; background:#e3f3e8; }
+  .live-badge.done .dot{ background:#2f7d4f; animation:none; }
+  @keyframes pulse{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.35; transform:scale(.7); }
+  }
+
+  /* Frame + board */
+  .frame{
+    width:100%;
+    max-width:920px;
+    background:var(--wood-dark);
+    padding:22px;
+    border-radius:14px;
+    box-shadow:0 18px 40px rgba(0,0,0,.45), inset 0 0 0 2px rgba(0,0,0,.25);
+  }
+  
+  .board{
+    position:relative;
+    background:
+      radial-gradient(ellipse at 20% 15%, rgba(255,255,255,.05), transparent 40%),
+      radial-gradient(ellipse at 80% 85%, rgba(255,255,255,.04), transparent 45%),
+      linear-gradient(var(--board-bg), var(--board-bg2));
+    border-radius:6px;
+    min-height:460px;
+    max-height:560px;
+    overflow-y:auto;
+    padding:20px;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.5);
+  }
+  .board::-webkit-scrollbar{ width:10px; }
+  .board::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.15); border-radius:6px; }
+
+  .board-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    gap:10px;
+    border-bottom:1px dashed rgba(255,255,255,.25);
+    padding-bottom:12px;
+    margin-bottom:16px;
+  }
+  .goal-line{
+    color:var(--chalk);
+    font-size:19px;
+    max-width:600px;
+  }
+  .goal-line .label{ color:var(--chalk-dim); font-size:13px; display:block; letter-spacing:.02em; }
+
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; }
+  .legend-item{ display:flex; align-items:center; gap:6px; color:var(--chalk); font-size:14px; }
+  .legend-dot{ width:14px; height:14px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.15); }
+
+  .notes-wrap{
+    display:flex;
+    flex-wrap:wrap;
+    gap:22px 26px;
+    align-content:flex-start;
+  }
+
+  /* Final result panel */
+  .final-result{
+    position:relative;
+    width:100%;
+    background: #a0d7b6;
+    color: #1b4d22;
+    border-radius:6px;
+    padding:16px 46px 16px 18px;
+    margin-bottom:20px;
+    font-size:15px;
+    line-height:1.4;
+    cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.35);
+    animation:pin-in .45s cubic-bezier(.2,1.4,.4,1) both;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .final-result:hover{ transform:translateY(-2px); box-shadow:0 7px 18px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.35); }
+  .final-result-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:10px;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    opacity:.75;
+    margin-bottom:8px;
+  }
+  .final-result-body{
+    white-space:pre-wrap;
+    max-height:78px;
+    overflow:hidden;
+    -webkit-mask-image:linear-gradient(to bottom, black 60%, transparent 100%);
+    mask-image:linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+  .final-result .more{
+    position:absolute;
+    bottom:10px; right:14px;
+    font-size:11px;
+    opacity:.6;
+  }
+  
+  .final-result.expanded .final-result-body {
+    max-height: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .final-result.expanded .more {
+    display: none;
+  }
+
+  .empty-msg{
+    color:var(--chalk-dim);
+    font-size:16px;
+    padding:40px 0;
+    text-align:center;
+    width:100%;
+  }
+
+  /* Sticky note */
+  .note{
+    position:relative;
+    width:220px;
+    min-height:150px;
+    padding:22px 14px 14px;
+    font-size:14.5px;
+    line-height:1.35;
+    box-shadow:3px 6px 10px rgba(0,0,0,.35);
+    cursor:pointer;
+    transform-origin:center top;
+    animation:pin-in .45s cubic-bezier(.2,1.4,.4,1) both;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .note:hover{ transform:translateY(-3px) rotate(var(--r)) scale(1.03); box-shadow:5px 10px 16px rgba(0,0,0,.4); }
+  .note .pin{
+    position:absolute;
+    top:-7px; left:50%;
+    transform:translateX(-50%);
+    width:14px; height:14px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff8, #8886 60%, #0004);
+    box-shadow:0 3px 4px rgba(0,0,0,.4);
+  }
+  .note .agent-name{
+    font-weight:700;
+    font-size:14px;
+    display:block;
+    margin-bottom:6px;
+  }
+  .note .body{
+    white-space:pre-wrap;
+    max-height:96px;
+    overflow:hidden;
+    -webkit-mask-image:linear-gradient(to bottom, black 70%, transparent 100%);
+    mask-image:linear-gradient(to bottom, black 70%, transparent 100%);
+  }
+  .note .more{
+    position:absolute;
+    bottom:8px; right:12px;
+    font-size:11px;
+    opacity:.6;
+  }
+
+  @keyframes pin-in{
+    0%{ opacity:0; transform:translateY(-18px) rotate(0deg) scale(.85); }
+    60%{ opacity:1; }
+    100%{ opacity:1; transform:translateY(0) rotate(var(--r)) scale(1); }
+  }
+
+  /* Modal */
+  .modal-bg{
+    position:fixed; inset:0;
+    background:rgba(10,10,8,.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:10;
+  }
+  .modal-bg.open{ display:flex; }
+  .modal{
+    max-width:520px;
+    width:100%;
+    max-height:80vh;
+    overflow-y:auto;
+    padding:26px 22px 20px;
+    font-size:16px;
+    line-height:1.45;
+    box-shadow:6px 12px 24px rgba(0,0,0,.5);
+    position:relative;
+    background:var(--ui-bg); 
+  }
+  .modal .agent-name{ font-weight:700; font-size:17px; display:block; margin-bottom:10px; }
+  .modal .body{ white-space:pre-wrap; }
+  .modal.card-critic{ color:var(--critic-ink-modal); }
+  .modal-close{
+    position:absolute; top:10px; right:14px;
+    background:none; border:none;
+    font-size:20px; cursor:pointer;
+    opacity:.6;
+  }
+  .modal-close:hover{ opacity:1; }
+
+  @media (prefers-reduced-motion: reduce){
+    .note{ animation:none; }
+    .live-badge .dot{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <h1>Agent Blackboard</h1>
+    <div class="live-badge" id="liveBadge"><span class="dot"></span><span id="liveBadgeText">Live</span></div>
+    <div class="progress" id="progress">0 / 0</div>
+    <div class="speed-wrap">
+      <span>speed</span>
+      <input type="range" id="speed" min="0.5" max="3" step="0.5" value="1">
+    </div>
+    <button id="playBtn">▶ Play</button>
+    <button id="resetBtn">⟲ Reset</button>
+    <label class="filebtn" for="fileInput">Load transcript.json</label>
+    <input type="file" id="fileInput" accept="application/json">
+  </div>
+
+  <div class="frame">
+    <div class="board" id="board">
+      <div class="board-header">
+        <div class="goal-line">
+          <span class="label">The Goal:</span>
+          <span id="goalText">—</span>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="final-result" id="finalResult" style="display:none;">
+        <div class="final-result-head">
+          <span class="final-result-label">Final result</span>
+        </div>
+        <div class="final-result-body" id="finalPreview"></div>
+        <span class="more">click to read all →</span>
+      </div>
+
+      <div class="notes-wrap" id="notesWrap">
+        <div class="empty-msg" id="emptyMsg">Press play to watch the agents work — or load a transcript.json from your own run.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalNote">
+      <button class="modal-close" id="modalClose">✕</button>
+      <span class="agent-name" id="modalAgent"></span>
+      <div class="body" id="modalBody"></div>
+    </div>
+  </div>
+
+<script>
+const AGENT_STYLES = {
+  planner:    { cls:'planner' },
+  researcher: { cls:'researcher' },
+  writer:     { cls:'writer' },
+  critic:     { cls:'critic' },
+};
+function styleFor(agentName){
+  const key = (agentName || '').toLowerCase();
+  return AGENT_STYLES[key] || { cls:'guest' };
+}
+
+const DEMO = {
+  goal: "Write a short guide on brewing pour-over coffee for beginners",
+  transcript: [
+    { agent:"Planner", content:'[{"step":1,"owner":"researcher","task":"Gather the standard pour-over ratio and grind size"},{"step":2,"owner":"researcher","task":"List the equipment a beginner needs"},{"step":3,"owner":"writer","task":"Draft the guide"}]' },
+    { agent:"Researcher", content:"- Standard ratio: 1:16 (coffee:water) by weight\n- Medium-fine grind, like sea salt\n- Water temp: 195-205°F, just off the boil\n- Bloom the grounds for 30-45s before the main pour\n- [UNVERIFIED] Some guides suggest 1:15 for a stronger cup" },
+    { agent:"Researcher", content:"- Equipment: dripper (e.g. V60), paper filter, gooseneck kettle\n- A scale is more reliable than measuring cups\n- Pre-rinse the filter to remove papery taste\n- Total brew time is usually 2.5-3.5 minutes" },
+    { agent:"Writer", content:"Pour-Over Coffee, Step by Step\n\nStart with a 1:16 ratio of coffee to water by weight, ground to a medium-fine consistency. Rinse your paper filter, add the grounds, and pour just enough hot water (195-205°F) to bloom them for 30-45 seconds. Then pour the rest slowly in circles, aiming for a total brew time of about 3 minutes." },
+    { agent:"Critic", content:'{"score":6,"verdict":"revise","issues":["Doesn\'t mention equipment needed","No guidance on pour technique beyond \'circles\'"]}' },
+    { agent:"Writer", content:"Pour-Over Coffee, Step by Step\n\nYou'll need a dripper, paper filter, gooseneck kettle, and ideally a scale. Use a 1:16 ratio of coffee to water by weight, ground medium-fine. Rinse the filter, add grounds, and bloom with a little hot water (195-205°F) for 30-45 seconds — this lets trapped gas escape. Then pour the rest in slow, steady circles from the center outward, keeping the water level even, until you hit your total weight. Aim for a total brew time of 2.5-3.5 minutes." },
+    { agent:"Critic", content:'{"score":9,"verdict":"accept","issues":[]}' },
+  ]
+};
+
+let goal = "";
+let transcript = [];
+let idx = 0;
+let playing = false;
+let timer = null;
+let liveActive = false;
+
+const boardEl = document.getElementById('board');
+const notesWrap = document.getElementById('notesWrap');
+const emptyMsg = document.getElementById('emptyMsg');
+const goalText = document.getElementById('goalText');
+const legendEl = document.getElementById('legend');
+const progressEl = document.getElementById('progress');
+const playBtn = document.getElementById('playBtn');
+const resetBtn = document.getElementById('resetBtn');
+const speedInput = document.getElementById('speed');
+const fileInput = document.getElementById('fileInput');
+const fileLabel = document.querySelector('label.filebtn');
+const modalBg = document.getElementById('modalBg');
+const modalAgent = document.getElementById('modalAgent');
+const modalBody = document.getElementById('modalBody');
+const modalNote = document.getElementById('modalNote');
+const liveBadge = document.getElementById('liveBadge');
+const liveBadgeText = document.getElementById('liveBadgeText');
+const finalResult = document.getElementById('finalResult');
+const finalPreview = document.getElementById('finalPreview');
+
+finalResult.addEventListener('click', () => {
+  finalResult.classList.toggle('expanded');
+});
+
+function showFinalResult() {
+  const writers = transcript.filter(e => e.agent === 'Writer');
+  const critics = transcript.filter(e => e.agent === 'Critic');
+
+  if (writers.length > 0) {
+    let finalDraft = writers[writers.length - 1].content;
+    let scoreText = 'N/A';
+
+    if (critics.length > 0) {
+      let rawContent = critics[critics.length - 1].content;
+      
+      let match = rawContent.match(/"score"\s*:\s*(\d+)/i);
+      if (match && match[1]) {
+        scoreText = match[1] + '/10';
+      }
+    }
+
+    let combinedText = finalDraft + '\n\nFinal Score: ' + scoreText;
+    
+    let parsedHTML = escapeHtml(combinedText);
+    
+    parsedHTML = parsedHTML.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
+    parsedHTML = parsedHTML.replace(/\*(.*?)\*/g, '<em>$1</em>'); // Italics
+    
+    finalPreview.innerHTML = parsedHTML;
+    
+    finalResult.style.display = 'block';
+  }
+}
+
+function buildLegend(){
+  const seen = new Set(transcript.map(e => (e.agent||'').toLowerCase()));
+  const order = ['planner','researcher','writer','critic'];
+  legendEl.innerHTML = '';
+  order.filter(a => seen.has(a)).forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot card-${a}"></span>${a[0].toUpperCase()+a.slice(1)}`;
+    legendEl.appendChild(item);
+  });
+}
+
+function loadData(data){
+  goal = data.goal || "";
+  transcript = Array.isArray(data.transcript) ? data.transcript : (Array.isArray(data) ? data : []);
+  goalText.textContent = goal || "(no goal provided)";
+  buildLegend();
+  resetBoard();
+}
+
+function resetBoard(){
+  stopPlaying();
+  idx = 0;
+  notesWrap.innerHTML = '';
+  notesWrap.appendChild(emptyMsg);
+  emptyMsg.style.display = transcript.length ? 'none' : 'block';
+  updateProgress();
+  playBtn.textContent = '▶ Play';
+  
+  finalResult.style.display = 'none';
+  finalResult.classList.remove('expanded');
+}
+
+function updateProgress(){
+  progressEl.textContent = `${idx} / ${transcript.length}`;
+}
+
+function appendNote(entry){
+  const style = styleFor(entry.agent);
+  const rot = (Math.random() * 8 - 4).toFixed(1);
+  const note = document.createElement('div');
+  note.className = `note card-${style.cls}`;
+  note.style.setProperty('--r', rot + 'deg');
+  note.style.transform = `rotate(${rot}deg)`;
+
+  const truncated = entry.content && entry.content.length > 260;
+  note.innerHTML = `
+    <div class="pin"></div>
+    <span class="agent-name">${entry.agent || 'Agent'}</span>
+    <div class="body">${escapeHtml(entry.content || '')}</div>
+    ${truncated ? '<span class="more">click to read all →</span>' : ''}
+  `;
+  note.addEventListener('click', () => openModal(entry));
+  emptyMsg.style.display = 'none';
+  notesWrap.appendChild(note);
+  boardEl.scrollTo({ top: boardEl.scrollHeight, behavior: 'smooth' });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function openModal(entry){
+  modalAgent.textContent = entry.agent || 'Agent';
+  modalBody.textContent = entry.content || '';
+  const style = styleFor(entry.agent);
+  modalNote.className = `modal card-${style.cls}`;
+  modalBg.classList.add('open');
+}
+document.getElementById('modalClose').addEventListener('click', () => modalBg.classList.remove('open'));
+modalBg.addEventListener('click', (e) => { if(e.target === modalBg) modalBg.classList.remove('open'); });
+
+function stepForward(){
+  if(idx >= transcript.length){ stopPlaying(); return; }
+  appendNote(transcript[idx]);
+  idx++;
+  updateProgress();
+  if(idx >= transcript.length){ 
+    stopPlaying(); 
+    showFinalResult();
+    return; 
+  }
+  const speed = parseFloat(speedInput.value) || 1;
+  timer = setTimeout(stepForward, 1400 / speed);
+}
+
+function startPlaying(){
+  if(liveActive) return;
+  if(transcript.length === 0) return;
+  if(idx >= transcript.length) resetBoard();
+  playing = true;
+  playBtn.textContent = '⏸ Pause';
+  stepForward();
+}
+
+function stopPlaying(){
+  playing = false;
+  clearTimeout(timer);
+  playBtn.textContent = idx >= transcript.length && transcript.length ? '↻ Replay' : '▶ Play';
+}
+
+playBtn.addEventListener('click', () => { playing ? stopPlaying() : startPlaying(); });
+resetBtn.addEventListener('click', () => { if(!liveActive) resetBoard(); });
+
+fileInput.addEventListener('change', (e) => {
+  if(liveActive) return;
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      loadData(data);
+    }catch(err){
+      alert('Could not read that file as JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+function setControlsDisabled(disabled){
+  playBtn.disabled = disabled;
+  resetBtn.disabled = disabled;
+  speedInput.disabled = disabled;
+  fileInput.disabled = disabled;
+  fileLabel.classList.toggle('disabled', disabled);
+}
+
+function tryLiveConnect(){
+  if (window.location.protocol === 'file:' || typeof EventSource === 'undefined') return;
+
+  let connected = false;
+  const es = new EventSource('events');
+
+  es.addEventListener('init', (e) => {
+    connected = true;
+    liveActive = true;
+    liveBadge.style.display = 'inline-flex';
+    liveBadge.classList.remove('done');
+    liveBadgeText.textContent = 'Live';
+    setControlsDisabled(true);
+
+    const data = JSON.parse(e.data);
+    goal = data.goal || '';
+    goalText.textContent = goal || '(no goal yet)';
+    transcript = [];
+    idx = 0;
+    notesWrap.innerHTML = '';
+    notesWrap.appendChild(emptyMsg);
+    emptyMsg.textContent = 'Waiting for the first agent to speak…';
+    emptyMsg.style.display = 'block';
+    legendEl.innerHTML = '';
+    updateProgress();
+  });
+
+  es.addEventListener('entry', (e) => {
+    const entry = JSON.parse(e.data);
+    transcript.push(entry);
+    idx = transcript.length;
+    buildLegend();
+    appendNote(entry);
+    updateProgress();
+  });
+
+  es.addEventListener('done', (e) => {
+    let stats = {};
+    try{ stats = JSON.parse(e.data); }catch(err){}
+    liveBadge.classList.add('done');
+    const bits = [];
+    if(typeof stats.revisions === 'number') bits.push(`${stats.revisions} revision${stats.revisions === 1 ? '' : 's'}`);
+    liveBadgeText.textContent = bits.length ? `Run complete — ${bits.join(', ')}` : 'Run complete';
+    setControlsDisabled(false);
+    playBtn.disabled = true; 
+    liveActive = false;
+
+    showFinalResult();
+  });
+
+  es.onerror = () => {
+    if(!connected){ es.close(); } 
+  };
+}
+
+loadData(DEMO);
+tryLiveConnect();
+</script>
+</body>
+</html>
