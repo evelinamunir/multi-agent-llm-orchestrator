@@ -7,31 +7,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --wood-dark:#3c2415;
-    --wood-mid:#5c3a24;
-    --wood-light:#7a5335;
-    --board-bg:#2f3e34;
-    --board-bg2:#28352c;
-    --chalk:#eef2ea;
-    --chalk-dim:#c6d1c6;
-    --ui-bg:#ece6d8;
-    --ui-ink:#241a12;
-    --planner:#f2c14e;
-    --planner-ink:#5c4405;
-    --researcher:#7fb8bd;
-    --researcher-ink:#0f3a3d;
-    --writer:#d98fb0;
-    --writer-ink:#5c1c39;
-    --critic:#c1543c;
-    --critic-ink:#fbe9e4;
-    --critic-ink-modal:#5c1710;
-    --guest:#b9b3a3;
-    --guest-ink:#333;
+    --wood-dark:#412615;
+    --wood-mid:#603b22;
+    --wood-light:#7b5639;
+    --board-bg:#2e3d33;
+    --board-bg2:#243128;
+    --chalk:#e9ebe7;
+    --chalk-dim:#ced2ce;
+    --ui-bg:#f1e5ee;
+    --ui-ink:#010100;
+    --planner:#f2d94e;
+    --planner-ink:#644b0d;
+    --researcher:#6cbdbd;
+    --researcher-ink:#133f42;
+    --writer:#d28cb2;
+    --writer-ink:#5e203c;
+    --critic:#db5f44;
+    --critic-ink:#f6e3de;
+    --critic-ink-modal:#581912;
+    --guest:#b5b1a6;
+    --guest-ink:#2e2e2e;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:#141a15;
+    background:#0d100d;
     font-family:'Google Sans Flex',sans-serif;
     color:var(--ui-ink);
     display:flex;
@@ -72,7 +72,7 @@
     font-size:13px;
     font-weight:600;
     background:var(--wood-mid);
-    color:#f4ede1;
+    color:#f1e5ee;
     border:none;
     border-radius:6px;
     padding:8px 14px;
@@ -168,8 +168,8 @@
   .final-result{
     position:relative;
     width:100%;
-    background: #a0d7b6;
-    color: #1b4d22;
+    background: #9fd8b6;
+    color: #1c4a22;
     border-radius:6px;
     padding:16px 46px 16px 18px;
     margin-bottom:20px;
@@ -335,7 +335,7 @@
       <div class="board-header">
         <div class="goal-line">
           <span class="label">The Goal:</span>
-          <span id="goalText">—</span>
+          <span id="goalText">(none)</span>
         </div>
         <div class="legend" id="legend"></div>
       </div>
@@ -348,7 +348,7 @@
       </div>
 
       <div class="notes-wrap" id="notesWrap">
-        <div class="empty-msg" id="emptyMsg">Press play to watch the agents work — or load a transcript.json from your own run.</div>
+        <div class="empty-msg" id="emptyMsg">Press play to watch the agents work on the demo, or load a transcript.json from your own run.</div>
       </div>
     </div>
   </div>
@@ -362,7 +362,7 @@
   </div>
 
 <script>
-const AGENT_STYLES = {
+const agent_styles = {
   planner:    { cls:'planner' },
   researcher: { cls:'researcher' },
   writer:     { cls:'writer' },
@@ -370,18 +370,18 @@ const AGENT_STYLES = {
 };
 function styleFor(agentName){
   const key = (agentName || '').toLowerCase();
-  return AGENT_STYLES[key] || { cls:'guest' };
+  return agent_styles[key] || { cls:'guest' };
 }
 
-const DEMO = {
+const demo = {
   goal: "Write a short guide on brewing pour-over coffee for beginners",
   transcript: [
     { agent:"Planner", content:'[{"step":1,"owner":"researcher","task":"Gather the standard pour-over ratio and grind size"},{"step":2,"owner":"researcher","task":"List the equipment a beginner needs"},{"step":3,"owner":"writer","task":"Draft the guide"}]' },
-    { agent:"Researcher", content:"- Standard ratio: 1:16 (coffee:water) by weight\n- Medium-fine grind, like sea salt\n- Water temp: 195-205°F, just off the boil\n- Bloom the grounds for 30-45s before the main pour\n- [UNVERIFIED] Some guides suggest 1:15 for a stronger cup" },
+    { agent:"Researcher", content:"- Standard ratio: 1:16 (coffee:water) by weight\n- Medium-fine grind, like sea salt\n- Water temp: 195-205°F, just off the boil\n- Bloom the grounds for 30-45s before the main pour\n- [Unverified] Some guides suggest 1:15 for a stronger cup" },
     { agent:"Researcher", content:"- Equipment: dripper (e.g. V60), paper filter, gooseneck kettle\n- A scale is more reliable than measuring cups\n- Pre-rinse the filter to remove papery taste\n- Total brew time is usually 2.5-3.5 minutes" },
     { agent:"Writer", content:"Pour-Over Coffee, Step by Step\n\nStart with a 1:16 ratio of coffee to water by weight, ground to a medium-fine consistency. Rinse your paper filter, add the grounds, and pour just enough hot water (195-205°F) to bloom them for 30-45 seconds. Then pour the rest slowly in circles, aiming for a total brew time of about 3 minutes." },
     { agent:"Critic", content:'{"score":6,"verdict":"revise","issues":["Doesn\'t mention equipment needed","No guidance on pour technique beyond \'circles\'"]}' },
-    { agent:"Writer", content:"Pour-Over Coffee, Step by Step\n\nYou'll need a dripper, paper filter, gooseneck kettle, and ideally a scale. Use a 1:16 ratio of coffee to water by weight, ground medium-fine. Rinse the filter, add grounds, and bloom with a little hot water (195-205°F) for 30-45 seconds — this lets trapped gas escape. Then pour the rest in slow, steady circles from the center outward, keeping the water level even, until you hit your total weight. Aim for a total brew time of 2.5-3.5 minutes." },
+    { agent:"Writer", content:"Pour-Over Coffee, Step by Step\n\nYou'll need a dripper, paper filter, gooseneck kettle, and ideally a scale. Use a 1:16 ratio of coffee to water by weight, ground medium-fine. Rinse the filter, add grounds, and bloom with a little hot water (195-205°F) for 30-45 seconds. Then pour the rest in slow, steady circles from the center outward, keeping the water level even, until you hit your total weight. Aim for a total brew time of 2.5-3.5 minutes." },
     { agent:"Critic", content:'{"score":9,"verdict":"accept","issues":[]}' },
   ]
 };
@@ -619,7 +619,7 @@ function tryLiveConnect(){
     liveBadge.classList.add('done');
     const bits = [];
     if(typeof stats.revisions === 'number') bits.push(`${stats.revisions} revision${stats.revisions === 1 ? '' : 's'}`);
-    liveBadgeText.textContent = bits.length ? `Run complete — ${bits.join(', ')}` : 'Run complete';
+    liveBadgeText.textContent = bits.length ? `Run complete: ${bits.join(', ')}` : 'Run complete';
     setControlsDisabled(false);
     playBtn.disabled = true; 
     liveActive = false;
@@ -632,7 +632,7 @@ function tryLiveConnect(){
   };
 }
 
-loadData(DEMO);
+loadData(demo);
 tryLiveConnect();
 </script>
 </body>
