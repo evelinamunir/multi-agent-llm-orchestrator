@@ -32,4 +32,4 @@ The underlying framework supports multiple LLM backends; it defaults to a lightw
 <br>
 
 ### Example of blackboard visualiser:
-<img src="Blackboard_Example.png" width="550"/>
+<img src="blackboard_example.png" width="550"/>
